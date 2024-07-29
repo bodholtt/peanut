@@ -1,0 +1,12 @@
+---
+const response = await fetch(`${import.meta.env.API_URL}/post/1`);
+const data = await response.body;
+---
+
+<h1>Test page</h1>
+
+<p>{data}</p>
+
+<form action={`${import.meta.env.API_URL}/post`} method="POST">
+    <button type="submit">New Post</button>
+</form>

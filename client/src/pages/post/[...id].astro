@@ -1,0 +1,141 @@
+---
+import PostsLayout from "../../layouts/PostsLayout.astro";
+import {Post, User} from "../../global/types";
+
+const { id } = Astro.params;
+const titleActual = `Post ${id}`
+
+const response = await fetch(`${import.meta.env.API_URL}/post/${id}`);
+const postDetails: Post = await response.json();
+
+if (!postDetails) {
+    return new Response(null, {
+        status: 404
+    });
+}
+
+const uploadDate = new Date(postDetails.created_at);
+const tags = postDetails.tags? postDetails.tags.split(' ') : []
+const imagePath = `${import.meta.env.STATIC_URL}${postDetails.image_path}`
+
+const uresponse = await fetch(`${import.meta.env.API_URL}/user/${postDetails.author_id}`);
+const author: User = await uresponse.json();
+---
+
+<PostsLayout title={titleActual}>
+    <section class="grid cols-auto-1fr overflow-hidden">
+
+    <section class="w-56 flex flex-col border-r-gray-600 p-4 overflow-y-auto">
+
+        <h2 class="text-xl text-twcolor-950 font-bold text-center">Post {id}</h2>
+
+        <br class="m-2"/>
+
+        <div class="flex w-full justify-between">
+            <p>fit: </p>
+            <p class="fitclass" title="height" id="fitheight">height</p>
+            <span class="text-twcolor-950">&#9733;</span>
+            <p class="fitclass" title="width" id="fitwidth">width</p>
+            <span class="text-twcolor-950">&#9733;</span>
+            <p class="fitclass underline font-bold" title="both" id="fitboth">both</p>
+        </div>
+        <a href={imagePath} class="text-twcolor-800">open image</a>
+
+        <br class="m-2"/>
+
+        <div class="flex justify-between w-full">
+            {(Number(id) - 1) > 0 ?
+                    <a href={`/post/${Number(id) - 1}`} class="text-twcolor-800"> &#x2190; prev </a> :
+                    <p class="text-gray-500"> &#x2190; prev </p>
+            }
+            <span class="text-twcolor-950">&#9733;</span>
+            <a href={`/post/${Number(id) + 1}`} class="text-twcolor-800"> next &#x2192; </a>
+        </div>
+
+        <label>
+            <input type="text" class="w-full" placeholder="enter tags..."/>
+        </label>
+        <hr class="my-2"/>
+        {tags.map((tag) => (
+            <a href={`/tags/${tag}`} class="text-twcolor-800">{tag}</a>
+        ))}
+        <hr class="my-2"/>
+        <p>Uploaded by <a href={`/user/${author.id}`} class="text-twcolor-800">{author.username}</a></p>
+        <p class="text-gray-500 text-xs">{uploadDate.toUTCString()}</p>
+    </section>
+
+    <section class="flex flex-col gap-2 overflow-y-auto min-h-fit">
+        <div id="imageouter" class="max-w-full min-h-fit h-full p-4">
+            <img src={imagePath}
+                 id="image"
+                 alt={`Post ${postDetails.id}`}
+                 class="max-h-full max-w-full"/>
+        </div>
+        <hr class="mx-8 border-twcolor-950"/>
+        <form class="px-4 pb-16 flex flex-col items-start gap-2">
+            <h2 class="text-2xl">Edit post</h2>
+            <div class="flex flex-col items-start">
+                <label for="tagbox">Tags:</label>
+                <textarea id="tagbox" rows="4" cols="48">{tags.join(' ')}</textarea>
+            </div>
+            <button type="submit" class="border rounded border-twcolor-950 px-2 bg-twcolor-100">Submit changes</button>
+        </form>
+    </section>
+
+    </section>
+</PostsLayout>
+
+<script>
+    let image = document.getElementById("image");
+    let imageouter = document.getElementById("imageouter");
+    let fitwidth = document.getElementById("fitwidth");
+    let fitheight = document.getElementById("fitheight");
+    let fitboth = document.getElementById("fitboth");
+
+
+    const setFit = (fit) => {
+        switch (fit) {
+            case "width":
+                image.className = "max-w-full";
+                fitwidth.classList.add("underline", "font-bold");
+                fitheight.classList.remove("underline", "font-bold");
+                fitboth.classList.remove("underline", "font-bold");
+                imageouter.classList.remove("h-full");
+                break;
+            case "height":
+                image.className = "max-h-full";
+                fitwidth.classList.remove("underline", "font-bold");
+                fitheight.classList.add("underline", "font-bold");
+                fitboth.classList.remove("underline", "font-bold");
+                imageouter.classList.add("h-full");
+                break;
+            case "both":
+                image.className = "max-h-full max-w-full";
+                fitwidth.classList.remove("underline", "font-bold");
+                fitheight.classList.remove("underline", "font-bold");
+                fitboth.classList.add("underline", "font-bold");
+                imageouter.classList.add("h-full");
+                break;
+        }
+    }
+
+    fitwidth.addEventListener("click", () => {
+        setFit("width");
+    });
+    fitheight.addEventListener("click", () => {
+        setFit("height");
+    });
+    fitboth.addEventListener("click", () => {
+        setFit("both");
+    });
+</script>
+
+<style>
+    .fitclass {
+        @apply text-twcolor-800 cursor-pointer text-center;
+    }
+    .fitclass::before {
+        @apply font-bold block h-0 overflow-hidden;
+        content: attr(title);
+    }
+</style>

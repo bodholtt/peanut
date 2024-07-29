@@ -1,0 +1,21 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const response = await fetch(`${import.meta.env.API_URL}/postCount`);
+const postCount = await response.json();
+---
+
+<Layout>
+	<article class="flex flex-col gap-1 items-center justify-center h-full">
+		<h1 class="text-4xl">Peanut</h1>
+		<p>{postCount} posts</p>
+		<label>
+			<input type="text" placeholder="search" />
+		</label>
+		<a href="/posts">view all posts</a>
+
+		<form action={`${import.meta.env.API_URL}/post`} method="post">
+			<button type="submit">create post</button>
+		</form>
+	</article>
+</Layout>

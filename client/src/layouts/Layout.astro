@@ -1,0 +1,30 @@
+---
+interface Props {
+	title: string;
+}
+
+import "../global/global.css"
+
+const { title } = Astro.props;
+const titleActual = title ? `${title} | Peanut` : "Peanut"
+---
+
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		<title>{titleActual}</title>
+	</head>
+
+	<body class="h-screen w-screen overflow-hidden bg-twcolor-50">
+
+	<main class="h-full overflow-hidden">
+		<slot />
+	</main>
+
+	</body>
+
+</html>
