@@ -79,10 +79,11 @@ func GetPost(id int) (*types.Post, error) {
 	var createdAt time.Time
 	var imagePath string
 	var authorID int
+	var source string
 
 	err := db.QueryRow(context.Background(),
-		"SELECT tags, created_at, image_path, author_id FROM posts WHERE post_id = $1", id).
-		Scan(&tags, &createdAt, &imagePath, &authorID)
+		"SELECT tags, created_at, image_path, author_id, source FROM posts WHERE post_id = $1", id).
+		Scan(&tags, &createdAt, &imagePath, &authorID, &source)
 
 	if err != nil {
 		log.Println(err)
@@ -95,6 +96,7 @@ func GetPost(id int) (*types.Post, error) {
 		CreatedAt: createdAt.String(),
 		ImagePath: imagePath,
 		AuthorID:  strconv.Itoa(authorID),
+		Source:    source,
 	}
 
 	return post, nil

@@ -29,6 +29,15 @@ const author: User = await uresponse.json();
 
         <h2 class="text-xl text-twcolor-950 font-bold text-center">Post {id}</h2>
 
+        <div class="flex justify-between w-full">
+            {(Number(id) - 1) > 0 ?
+                    <a href={`/post/${Number(id) - 1}`} class="text-twcolor-800"> &#x2190; prev </a> :
+                    <p class="text-gray-500"> &#x2190; prev </p>
+            }
+            <span class="text-twcolor-950">&#9733;</span>
+            <a href={`/post/${Number(id) + 1}`} class="text-twcolor-800"> next &#x2192; </a>
+        </div>
+
         <br class="m-2"/>
 
         <div class="flex w-full justify-between">
@@ -40,46 +49,50 @@ const author: User = await uresponse.json();
             <p class="fitclass underline font-bold" title="both" id="fitboth">both</p>
         </div>
         <a href={imagePath} class="text-twcolor-800">open image</a>
+        {postDetails.source ? <a href={postDetails.source} class="text-twcolor-800">image source</a> : ''}
 
         <br class="m-2"/>
-
-        <div class="flex justify-between w-full">
-            {(Number(id) - 1) > 0 ?
-                    <a href={`/post/${Number(id) - 1}`} class="text-twcolor-800"> &#x2190; prev </a> :
-                    <p class="text-gray-500"> &#x2190; prev </p>
-            }
-            <span class="text-twcolor-950">&#9733;</span>
-            <a href={`/post/${Number(id) + 1}`} class="text-twcolor-800"> next &#x2192; </a>
-        </div>
 
         <label>
             <input type="text" class="w-full" placeholder="enter tags..."/>
         </label>
-        <hr class="my-2"/>
         {tags.map((tag) => (
             <a href={`/tags/${tag}`} class="text-twcolor-800">{tag}</a>
         ))}
         <hr class="my-2"/>
+
         <p>Uploaded by <a href={`/user/${author.id}`} class="text-twcolor-800">{author.username}</a></p>
         <p class="text-gray-500 text-xs">{uploadDate.toUTCString()}</p>
+
     </section>
 
     <section class="flex flex-col gap-2 overflow-y-auto min-h-fit">
+
         <div id="imageouter" class="max-w-full min-h-fit h-full p-4">
             <img src={imagePath}
                  id="image"
                  alt={`Post ${postDetails.id}`}
                  class="max-h-full max-w-full"/>
         </div>
+
         <hr class="mx-8 border-twcolor-950"/>
-        <form class="px-4 pb-16 flex flex-col items-start gap-2">
+
+        <form class="px-4 pb-16 flex flex-col w-fit items-start gap-1">
+
             <h2 class="text-2xl">Edit post</h2>
-            <div class="flex flex-col items-start">
-                <label for="tagbox">Tags:</label>
-                <textarea id="tagbox" rows="4" cols="48">{tags.join(' ')}</textarea>
-            </div>
+
+            <label for="tagbox">Tags:</label>
+            <textarea id="tagbox" rows="4" cols="64" class="resize-x">{tags.join(' ')}</textarea>
+
+            <label for="source">Source:</label>
+            <input type="text" id="source" value={postDetails.source} class="w-full" />
+
+            <br class="m-2"/>
+
             <button type="submit" class="border rounded border-twcolor-950 px-2 bg-twcolor-100">Submit changes</button>
+
         </form>
+
     </section>
 
     </section>
@@ -92,9 +105,9 @@ const author: User = await uresponse.json();
     let fitheight = document.getElementById("fitheight");
     let fitboth = document.getElementById("fitboth");
 
-
     const setFit = (fit) => {
         switch (fit) {
+            // this is ugly as shit
             case "width":
                 image.className = "max-w-full";
                 fitwidth.classList.add("underline", "font-bold");

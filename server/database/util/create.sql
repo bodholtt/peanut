@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS posts (
     tags VARCHAR(255) NOT NULL DEFAULT '',
     created_at TIMESTAMP NOT NULL,
     image_path VARCHAR(255) NOT NULL,
-    author_id INT REFERENCES users(user_id)
+    author_id INT REFERENCES users(user_id),
+    source VARCHAR(255) NOT NULL DEFAULT ''
 );
 

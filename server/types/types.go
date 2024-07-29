@@ -10,6 +10,7 @@ type Post struct {
 	CreatedAt string `json:"created_at"`
 	ImagePath string `json:"image_path"`
 	AuthorID  string `json:"author_id"`
+	Source    string `json:"source"`
 }
 
 // PostThumb - thumbnail of post viewed on the browsing page
