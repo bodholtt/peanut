@@ -1,11 +1,17 @@
 ---
 import PostsLayout from "../../layouts/PostsLayout.astro";
-import {Post, User} from "../../global/types";
+import type {Post, User} from "../../global/types";
 
 const { id } = Astro.params;
 const titleActual = `Post ${id}`
 
 const response = await fetch(`${import.meta.env.API_URL}/post/${id}`);
+if (response.status == 404) {
+    return new Response(null, {
+        status: 404
+    });
+}
+
 const postDetails: Post = await response.json();
 
 if (!postDetails) {
@@ -30,12 +36,17 @@ const author: User = await uresponse.json();
         <h2 class="text-xl text-twcolor-950 font-bold text-center">Post {id}</h2>
 
         <div class="flex justify-between w-full">
-            {(Number(id) - 1) > 0 ?
-                    <a href={`/post/${Number(id) - 1}`} class="text-twcolor-800"> &#x2190; prev </a> :
+            {postDetails.previous > 0 ?
+                    <a href={`/post/${postDetails.previous}`} class="text-twcolor-800"> &#x2190; prev </a> :
                     <p class="text-gray-500"> &#x2190; prev </p>
             }
+
             <span class="text-twcolor-950">&#9733;</span>
-            <a href={`/post/${Number(id) + 1}`} class="text-twcolor-800"> next &#x2192; </a>
+
+            {postDetails.next > 0 ?
+                    <a href={`/post/${postDetails.next}`} class="text-twcolor-800"> next &#x2192; </a> :
+                    <p class="text-gray-500"> next &#x2192; </p>
+            }
         </div>
 
         <br class="m-2"/>
@@ -64,6 +75,13 @@ const author: User = await uresponse.json();
         <p>Uploaded by <a href={`/user/${author.id}`} class="text-twcolor-800">{author.username}</a></p>
         <p class="text-gray-500 text-xs">{uploadDate.toUTCString()}</p>
 
+        <div class="flex items-start py-2">
+            <button id="deletePost"
+                    data-apiurl={import.meta.env.API_URL}
+                    data-id={id}
+                    class="rounded bg-twcolor-100 px-2">&#128465; Delete Post</button>
+        </div>
+
     </section>
 
     <section class="flex flex-col gap-2 overflow-y-auto min-h-fit">
@@ -89,7 +107,8 @@ const author: User = await uresponse.json();
 
             <br class="m-2"/>
 
-            <button type="submit" class="border rounded border-twcolor-950 px-2 bg-twcolor-100">Submit changes</button>
+            <button type="submit"
+                    class="border rounded border-twcolor-950 px-2 bg-twcolor-100">Submit changes</button>
 
         </form>
 
@@ -105,42 +124,57 @@ const author: User = await uresponse.json();
     let fitheight = document.getElementById("fitheight");
     let fitboth = document.getElementById("fitboth");
 
-    const setFit = (fit) => {
+    const setFit = (fit: string) => {
         switch (fit) {
             // this is ugly as shit
             case "width":
-                image.className = "max-w-full";
-                fitwidth.classList.add("underline", "font-bold");
-                fitheight.classList.remove("underline", "font-bold");
-                fitboth.classList.remove("underline", "font-bold");
-                imageouter.classList.remove("h-full");
+                image!.className = "max-w-full";
+                fitwidth!.classList.add("underline", "font-bold");
+                fitheight!.classList.remove("underline", "font-bold");
+                fitboth!.classList.remove("underline", "font-bold");
+                imageouter!.classList.remove("h-full");
                 break;
             case "height":
-                image.className = "max-h-full";
-                fitwidth.classList.remove("underline", "font-bold");
-                fitheight.classList.add("underline", "font-bold");
-                fitboth.classList.remove("underline", "font-bold");
-                imageouter.classList.add("h-full");
+                image!.className = "max-h-full";
+                fitwidth!.classList.remove("underline", "font-bold");
+                fitheight!.classList.add("underline", "font-bold");
+                fitboth!.classList.remove("underline", "font-bold");
+                imageouter!.classList.add("h-full");
                 break;
             case "both":
-                image.className = "max-h-full max-w-full";
-                fitwidth.classList.remove("underline", "font-bold");
-                fitheight.classList.remove("underline", "font-bold");
-                fitboth.classList.add("underline", "font-bold");
-                imageouter.classList.add("h-full");
+                image!.className = "max-h-full max-w-full";
+                fitwidth!.classList.remove("underline", "font-bold");
+                fitheight!.classList.remove("underline", "font-bold");
+                fitboth!.classList.add("underline", "font-bold");
+                imageouter!.classList.add("h-full");
                 break;
         }
     }
 
-    fitwidth.addEventListener("click", () => {
+    fitwidth!.addEventListener("click", () => {
         setFit("width");
     });
-    fitheight.addEventListener("click", () => {
+    fitheight!.addEventListener("click", () => {
         setFit("height");
     });
-    fitboth.addEventListener("click", () => {
+    fitboth!.addEventListener("click", () => {
         setFit("both");
     });
+
+    const deleteButton = document.getElementById("deletePost");
+
+    deleteButton.addEventListener("click", async () => {
+        const apiRoute: string = deleteButton.dataset.apiurl
+        const postID: string = deleteButton.dataset.id
+
+        const response = await fetch(`${apiRoute}/post/${postID}`, {
+            method: 'DELETE',
+        }).then(() => {console.log("finished")});
+        console.log(response);
+
+        window.location.href = "/posts";
+    });
+
 </script>
 
 <style>

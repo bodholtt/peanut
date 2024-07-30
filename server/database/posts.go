@@ -27,7 +27,8 @@ func GetPostThumbs(limit int, offset int) (*types.PostThumbs, error) {
 	var id int
 	var imagePath string
 
-	rows, err := db.Query(context.Background(), "SELECT post_id, image_path FROM posts ORDER BY post_id LIMIT $1 OFFSET $2", limit, offset)
+	rows, err := db.Query(context.Background(),
+		"SELECT post_id, image_path FROM posts WHERE post_id < (SELECT count(*) FROM posts) - $1 ORDER BY post_id DESC LIMIT $2", offset, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -49,26 +50,34 @@ func GetPostThumbs(limit int, offset int) (*types.PostThumbs, error) {
 	return &thumbs, nil
 }
 
-func CreatePost() (int, error) {
+func CreatePost(extension string) (postID int, imagePath string, err error) {
 	db := Establish()
 	defer db.Close()
 
 	var id int
-	imagePath := "/static/images/test.jpg"
 
-	err := db.QueryRow(
-		context.Background(),
-		"INSERT INTO posts (created_at, image_path, author_id) VALUES ($1, $2, $3) RETURNING post_id",
-		time.Now(), imagePath, 1).
-		Scan(&id)
+	rows, err := db.Query(context.Background(),
+		"INSERT INTO posts (created_at, author_id) VALUES ($1, $2) RETURNING post_id",
+		time.Now(), 1)
+	defer rows.Close()
+	condition := rows.Next()
+	if !condition {
+		return 0, "", err
+	}
+	err = rows.Scan(&id)
+
+	imagePath = "/static/images/" + strconv.Itoa(id) + extension
+
+	rows2, err := db.Query(context.Background(), "UPDATE posts SET image_path = $1 WHERE post_id = $2", imagePath, id)
+	defer rows2.Close()
 
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
 
-	log.Println("Inserted new post at time :", time.Now())
+	log.Println("Inserted new post", id, "at time", time.Now())
 
-	return id, nil
+	return id, imagePath, nil
 }
 
 func GetPost(id int) (*types.Post, error) {
@@ -100,4 +109,43 @@ func GetPost(id int) (*types.Post, error) {
 	}
 
 	return post, nil
+}
+
+func GetNextAndPreviousPostIDs(id int, query string) (prev int, next int) {
+	db := Establish()
+	defer db.Close()
+
+	// TODO: Implement doing the search query here
+
+	var prevID int
+	var nextID int
+
+	err := db.QueryRow(context.Background(),
+		"SELECT post_id FROM posts WHERE post_id = (select max(post_id) from posts where post_id < $1)", id).
+		Scan(&prevID)
+	if err != nil {
+		prevID = 0
+	}
+
+	err = db.QueryRow(context.Background(),
+		"SELECT post_id FROM posts WHERE post_id = (SELECT min(post_id) FROM posts WHERE post_id > $1)", id).
+		Scan(&nextID)
+	if err != nil {
+		nextID = 0
+	}
+
+	return prevID, nextID
+}
+
+func DeletePost(id int) error {
+	db := Establish()
+	defer db.Close()
+
+	_, err := db.Query(context.Background(), "DELETE FROM posts WHERE post_id = $1", id)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
 }

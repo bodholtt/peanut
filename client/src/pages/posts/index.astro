@@ -4,8 +4,8 @@ import PostsLayout from "../../layouts/PostsLayout.astro";
 import type {PostThumbs} from "../../global/types";
 
 // GET LIMIT AND OFFSET QUERIES
-const limit = Astro.url.searchParams.get('limit');
-const offset = Astro.url.searchParams.get('offset');
+const limit = Number(Astro.url.searchParams.get('limit'));
+let offset = Number(Astro.url.searchParams.get('offset'));
 let queries = [];
 if (limit) queries.push(`limit=${limit}`);
 if (offset) queries.push(`offset=${offset}`);
@@ -35,27 +35,28 @@ if (!limit && offset) {
 const pcresponse = await fetch(`${import.meta.env.API_URL}/postCount`);
 const postCount = await pcresponse.json();
 const limitNum = limit? Number(limit) : 50;
+if (!offset) offset = 0;
 
 let params = Astro.url.searchParams;
-params.set("offset", "0");
+const firstpageoffset = 0;
+params.set("offset", firstpageoffset.toString());
 const firstpagelink = `/posts?${params}`;
 
-params = Astro.url.searchParams;
-let newOffset = Number(offset) - limitNum;
-if (newOffset < 0) newOffset = 0;
-params.set("offset", newOffset.toString());
+let prevpageoffset =  offset - limitNum;
+if (prevpageoffset < 0) prevpageoffset = 0;
+params.set("offset", prevpageoffset.toString());
 const prevpagelink = `/posts?${params}`;
 
-params = Astro.url.searchParams;
-newOffset = Number(offset) + limitNum;
-if (newOffset >= postCount) newOffset = Number(offset);
-params.set("offset", newOffset.toString());
+let nextpageoffset = offset + limitNum
+if (nextpageoffset >= postCount) nextpageoffset = offset;
+params.set("offset", nextpageoffset.toString());
 const nextpagelink = `/posts?${params}`;
 
-params = Astro.url.searchParams;
-newOffset = postCount - ((postCount - limitNum) % limitNum);
-if (newOffset > postCount) newOffset = 0;
-params.set("offset", newOffset.toString());
+let lastpageoffset = postCount - ((postCount - limitNum) % limitNum);
+console.log(lastpageoffset)
+if (lastpageoffset >= postCount) lastpageoffset -= limitNum;
+if (lastpageoffset <= 0) lastpageoffset = offset;
+params.set("offset", lastpageoffset.toString());
 const lastpagelink = `/posts?${params}`;
 
 ---
@@ -73,16 +74,25 @@ const lastpagelink = `/posts?${params}`;
         <p>tag</p>
     </section>
 
-    <section class="flex flex-col h-full justify-between">
-        <div class="flex gap-2 p-4 flex-row flex-wrap overflow-y-auto content-start">
+    <section class="flex flex-col h-full justify-between overflow-y-auto">
+        <div class="flex gap-2 p-4 h-full flex-row flex-wrap overflow-y-auto content-start border-l border-b border-twcolor-950">
         {posts ? posts.map(post => (
-                <PostCard postThumb={post} />
+                        <PostCard postThumb={post} />
         )) :
         <p>No posts found</p>}
         </div>
         <div class="flex flex-row gap-4 justify-center items-center py-12">
-            <a href={firstpagelink} class="paginationlink">&#x21e4;</a>
-            <a href={prevpagelink} class="paginationlink">&#x2190;</a>
+
+            { firstpageoffset != offset ?
+                    <a href={firstpagelink} class="paginationlink">&#x21e4;</a> :
+                    <p class="text-gray-500">&#x21e4;</p>
+            }
+
+            { prevpageoffset != offset ?
+                    <a href={prevpagelink} class="paginationlink">&#x2190;</a> :
+                    <p class="text-gray-500">&#x2190;</p>
+            }
+
             <label>
                 <input type="number"
                        id="pagenumber"
@@ -90,8 +100,16 @@ const lastpagelink = `/posts?${params}`;
                        value={pageNum}
                 ></input>
             </label>
-            <a href={nextpagelink} class="paginationlink">&#x2192;</a>
-            <a href={lastpagelink} class="paginationlink">&#x21e5;</a>
+
+            { nextpageoffset != offset ?
+                    <a href={nextpagelink} class="paginationlink">&#x2192;</a> :
+                    <p class="text-gray-500">&#x2192;</p>
+            }
+
+            { lastpageoffset != offset ?
+                    <a href={lastpagelink} class="paginationlink">&#x21e5;</a> :
+                    <p class="text-gray-500">&#x21e5;</p>
+            }
         </div>
     </section>
 
@@ -113,9 +131,9 @@ const lastpagelink = `/posts?${params}`;
 </style>
 
 <script>
-    const pageNumEle = document.getElementById("pagenumber");
+    const pageNumEle = document.getElementById("pagenumber") as HTMLInputElement;
 
-    pageNumEle.addEventListener("change", () => {
+    pageNumEle!.addEventListener("change", () => {
 
         let url = new URL(window.location.href);
         let value = Number(pageNumEle.value);

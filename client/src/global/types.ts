@@ -5,7 +5,9 @@ export type Post = {
     image_path: string,
     created_at: string,
     author_id: number,
-    source: string
+    source: string,
+    previous: number,
+    next: number,
 }
 
 export type PostThumb = {

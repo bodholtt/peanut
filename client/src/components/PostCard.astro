@@ -8,10 +8,10 @@ interface Props {
 }
 
 const imagePath = `${import.meta.env.STATIC_URL}${postThumb.image_path}`
-const freeflow = 1;
+const freeflow: boolean = false;
 ---
 
-<a class={`${freeflow == 0 && "w-48"} h-32 border-2 border-twcolor-950 bg-twcolor-100`}
+<a class={`${!freeflow && "w-48"} h-32 border-2 border-twcolor-950 bg-twcolor-100`}
    href={`/post/${postThumb.id}`}>
     <img src={imagePath} alt={`Post ${postThumb.id}`} class="w-full h-full object-cover"/>
 </a>

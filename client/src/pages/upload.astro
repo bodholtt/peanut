@@ -1,0 +1,73 @@
+---
+import PostsLayout from "../layouts/PostsLayout.astro";
+
+const api = import.meta.env.API_URL
+---
+
+<PostsLayout title="Upload">
+    <section class="flex pt-20 w-full h-full overflow-y-scroll justify-center">
+
+        <div class="w-3/5 max-h-full flex flex-col gap-4 items-start">
+            <h1 class="text-6xl">Create new post</h1>
+
+            <div class="flex flex-row w-full max-h-full">
+
+                <form id="submittingForm"
+                      class="flex flex-col gap-1 items-start w-full p-2"
+                      data-apiurl={api}
+                >
+                    <!--  action={`${import.meta.env.API_URL}/post`}-->
+                    <!--method="post"-->
+                    <!--enctype="multipart/form-data"-->
+                    <label for="image" class="text-gray-500 border-twcolor-950 border-2 border-dashed rounded-2xl cursor-pointer grid place-items-center w-full h-32"
+                    > + </label>
+                    <input id="image" name="image" type="file" accept="image/*" class="hidden" required/>
+
+
+                    <label for="tags">Tags:</label>
+                    <textarea id="tags" name="tags" placeholder="Tags" class="w-full resize-none p-2" rows="4"></textarea>
+
+                    <label for="source">Source:</label>
+                    <input type="text" id="source" name="source" placeholder="Source" />
+
+                    <button type="submit" class="border rounded border-twcolor-950 bg-twcolor-100 px-2">create post</button>
+                </form>
+
+                <div class="p-2 w-[40%] max-h-full justify-center flex">
+                    <img src="" alt="preview" id="preview" class="object-contain w-full max-h-full border-twcolor-950 border-2 grid place-items-center" />
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+</PostsLayout>
+
+<script>
+    const imageuploader = document.getElementById("image");
+    const preview = document.getElementById("preview") as HTMLImageElement;
+    const form = document.getElementById("submittingForm") as HTMLFormElement;
+
+    imageuploader.addEventListener("change", (event) => {
+        preview.src = URL.createObjectURL(event.target.files[0]);
+        preview.onload = function() {
+            URL.revokeObjectURL(preview.src) // free memory
+        }
+    });
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        let formData = new FormData(form);
+
+        const apiRoute: string = form.dataset.apiurl
+
+        const response = await fetch(`${apiRoute}/post`,{
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        window.location.href = `/post/${data}`
+    });
+
+</script>
