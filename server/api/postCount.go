@@ -1,18 +1,26 @@
 package api
 
-// API route: /postCount
-
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"peanutserver/database"
+	"peanutserver/types"
 )
+
+// API route: /postCount
 
 func HandlePostCount(w http.ResponseWriter, r *http.Request) {
 	count, err := database.GetPostCount()
 	if err != nil {
-		log.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(types.APIResponse{
+			Body:  nil,
+			Error: err.Error(),
+		})
 	}
-	json.NewEncoder(w).Encode(count)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(types.APIResponse{
+		Body:  count,
+		Error: "",
+	})
 }

@@ -25,10 +25,19 @@ func GetPostThumbs(limit int, offset int) (*types.PostThumbs, error) {
 	defer db.Close()
 
 	var id int
+	var rownum int // trash var so that scan works
 	var imagePath string
 
 	rows, err := db.Query(context.Background(),
-		"SELECT post_id, image_path FROM posts WHERE post_id < (SELECT count(*) FROM posts) - $1 ORDER BY post_id DESC LIMIT $2", offset, limit)
+		`WITH ordered_posts AS (
+				SELECT post_id, image_path, ROW_NUMBER() OVER (ORDER BY post_id) AS row_num
+				FROM posts
+			)
+			SELECT post_id, image_path, row_num FROM ordered_posts
+			WHERE row_num <= (SELECT count(*) FROM ordered_posts) - $1 
+			ORDER BY row_num DESC LIMIT $2`,
+		offset, limit)
+
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +46,8 @@ func GetPostThumbs(limit int, offset int) (*types.PostThumbs, error) {
 	thumbs := types.PostThumbs{}
 
 	for rows.Next() {
-		err := rows.Scan(&id, &imagePath)
+
+		err := rows.Scan(&id, &imagePath, &rownum)
 		if err != nil {
 			return nil, err
 		}
@@ -50,7 +60,7 @@ func GetPostThumbs(limit int, offset int) (*types.PostThumbs, error) {
 	return &thumbs, nil
 }
 
-func CreatePost(extension string) (postID int, imagePath string, err error) {
+func CreatePost(extension string, uploaderID int) (postID int, imagePath string, err error) {
 	db := Establish()
 	defer db.Close()
 
@@ -58,15 +68,23 @@ func CreatePost(extension string) (postID int, imagePath string, err error) {
 
 	rows, err := db.Query(context.Background(),
 		"INSERT INTO posts (created_at, author_id) VALUES ($1, $2) RETURNING post_id",
-		time.Now(), 1)
+		time.Now(), uploaderID)
 	defer rows.Close()
+	if err != nil {
+		return 0, "", err
+	}
+
 	condition := rows.Next()
 	if !condition {
 		return 0, "", err
 	}
-	err = rows.Scan(&id)
 
-	imagePath = "/static/images/" + strconv.Itoa(id) + extension
+	err = rows.Scan(&id)
+	if err != nil {
+		return 0, "", err
+	}
+
+	imagePath = strconv.Itoa(id) + extension
 
 	rows2, err := db.Query(context.Background(), "UPDATE posts SET image_path = $1 WHERE post_id = $2", imagePath, id)
 	defer rows2.Close()
@@ -84,19 +102,47 @@ func GetPost(id int) (*types.Post, error) {
 	db := Establish()
 	defer db.Close()
 
-	var tags string
 	var createdAt time.Time
 	var imagePath string
 	var authorID int
 	var source string
 
 	err := db.QueryRow(context.Background(),
-		"SELECT tags, created_at, image_path, author_id, source FROM posts WHERE post_id = $1", id).
-		Scan(&tags, &createdAt, &imagePath, &authorID, &source)
+		"SELECT created_at, image_path, author_id, source FROM posts WHERE post_id = $1", id).
+		Scan(&createdAt, &imagePath, &authorID, &source)
 
 	if err != nil {
 		log.Println(err)
 		return nil, err
+	}
+
+	rows, err := db.Query(context.Background(),
+		"SELECT tag_id FROM post_tags WHERE post_id = $1", id)
+	defer rows.Close()
+
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	var tags []types.Tag
+	var tagID int
+	var tagName string
+
+	for rows.Next() {
+		err = rows.Scan(&tagID)
+		if err != nil {
+			log.Println(err)
+			break
+		}
+
+		err = db.QueryRow(context.Background(), "SELECT name FROM tags WHERE tag_id = $1", tagID).Scan(&tagName)
+		if err != nil {
+			log.Println(err)
+			break
+		}
+
+		tags = append(tags, types.Tag{ID: strconv.Itoa(tagID), Name: tagName})
 	}
 
 	post := &types.Post{
@@ -137,15 +183,22 @@ func GetNextAndPreviousPostIDs(id int, query string) (prev int, next int) {
 	return prevID, nextID
 }
 
-func DeletePost(id int) error {
+func DeletePost(id int) (filepath string, err error) {
 	db := Establish()
 	defer db.Close()
 
-	_, err := db.Query(context.Background(), "DELETE FROM posts WHERE post_id = $1", id)
+	rows, err := db.Query(context.Background(), "DELETE FROM posts WHERE post_id = $1 RETURNING image_path", id)
+	defer rows.Close()
 	if err != nil {
 		log.Println(err)
-		return err
+		return "", err
+	}
+	rows.Next()
+	err = rows.Scan(&filepath)
+	if err != nil {
+		return "", err
 	}
 
-	return nil
+	log.Println("Deleted post", id, "at time", time.Now())
+	return filepath, nil
 }

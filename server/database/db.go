@@ -5,11 +5,21 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
 	"os"
+	"peanutserver/pcfg"
+	"strconv"
 )
 
 func Initialize() {
 	//db, err := sql.Open("postgres", "user=postgres password=password sslmode=disable")
-	dburl := "postgres://postgres:password@localhost:5432/imageboard?sslmode=disable"
+	//dburl := "postgres://postgres:password@localhost:5432/imageboard?sslmode=disable"
+	dburl := "postgres://" +
+		pcfg.Cfg.Database.Username + ":" +
+		pcfg.Cfg.Database.Password + "@" +
+		pcfg.Cfg.Database.Host + ":" +
+		strconv.Itoa(pcfg.Cfg.Database.Port) + "/" +
+		pcfg.Cfg.Database.DatabaseName +
+		pcfg.Cfg.Database.Params
+
 	dbpool, err := pgxpool.New(context.Background(), dburl)
 	defer dbpool.Close()
 
@@ -17,7 +27,7 @@ func Initialize() {
 		log.Fatal(err)
 	}
 
-	_, err = dbpool.Exec(context.Background(), "CREATE DATABASE imageboard")
+	_, err = dbpool.Exec(context.Background(), "CREATE DATABASE "+pcfg.Cfg.Database.DatabaseName)
 	if err != nil {
 		log.Println(err)
 	}
@@ -39,12 +49,20 @@ func CreateTables(db *pgxpool.Pool) {
 	} else {
 		log.Println("Table posts successfully initialized")
 	}
-
 }
 
-func Establish() *pgxpool.Pool {
+// Establish - Establish a database connection
+// pool - Connection pool *** MUST BE CLOSED ***
+func Establish() (pool *pgxpool.Pool) {
 
-	dburl := "postgres://postgres:password@localhost:5432/imageboard?sslmode=disable"
+	dburl := "postgres://" +
+		pcfg.Cfg.Database.Username + ":" +
+		pcfg.Cfg.Database.Password + "@" +
+		pcfg.Cfg.Database.Host + ":" +
+		strconv.Itoa(pcfg.Cfg.Database.Port) + "/" +
+		pcfg.Cfg.Database.DatabaseName +
+		pcfg.Cfg.Database.Params
+
 	dbpool, err := pgxpool.New(context.Background(), dburl)
 	if err != nil {
 		log.Fatal(err)

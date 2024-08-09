@@ -1,0 +1,14 @@
+server:
+  port: 8080
+images:
+  root_location: "./static" # directory where images are stored
+  delete_image_files: false # upon post deletion, remove files if true, keep files if false
+database:
+  host: "localhost" # locally reachable address of postgres database
+  port: 5432
+  username: "postgres"
+  password: "password"
+  database_name: "imageboard"
+  params: "?sslmode=disable"
+client:
+  host: "http://localhost:4321" # URL of client, including port if applicable
