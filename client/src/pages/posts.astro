@@ -1,7 +1,7 @@
 ---
-import PostCard from "../../components/PostCard.astro";
-import PostsLayout from "../../layouts/PostsLayout.astro";
-import type {PostThumbs} from "../../global/types";
+import PostCard from "../components/PostCard.astro";
+import PostsLayout from "../layouts/PostsLayout.astro";
+import type {PostThumb, PostThumbs} from "../global/types";
 
 // GET LIMIT AND OFFSET QUERIES
 const limit = Number(Astro.url.searchParams.get('limit'));
@@ -12,14 +12,24 @@ if (offset) queries.push(`offset=${offset}`);
 let url = `${import.meta.env.API_URL}/posts`;
 if (queries) url += `?${queries.join('&')}`;
 
-// GET POST THUMBNAILS FROM API
-const response = await fetch(url);
-const postDetails: PostThumbs = await response.json();
-const posts = postDetails.Thumbs;
 
-if (posts) {
-    posts.sort((a,b) => (Number(a.id) < Number(b.id)? 1 : -1));
+// GET POST THUMBNAILS FROM API
+const token = Astro.cookies.get("token");
+let headers = {}
+if (token) headers = { "Authorization": `Bearer ${token?.value}` }
+const response = await fetch(url, headers);
+const data = await response.json();
+
+if (data.error) {
+    // you should do something
 }
+
+const postDetails: PostThumbs = data.body;
+let posts: PostThumb[];
+
+if (postDetails) posts = postDetails.Thumbs;
+
+if (posts) posts.sort((a,b) => (Number(a.id) < Number(b.id)? 1 : -1));
 
 // CALCULATE PAGE NUMBER
 let pageNum = 1;
@@ -53,7 +63,6 @@ params.set("offset", nextpageoffset.toString());
 const nextpagelink = `/posts?${params}`;
 
 let lastpageoffset = postCount - ((postCount - limitNum) % limitNum);
-console.log(lastpageoffset)
 if (lastpageoffset >= postCount) lastpageoffset -= limitNum;
 if (lastpageoffset <= 0) lastpageoffset = offset;
 params.set("offset", lastpageoffset.toString());
@@ -75,7 +84,7 @@ const lastpagelink = `/posts?${params}`;
     </section>
 
     <section class="flex flex-col h-full justify-between overflow-y-auto">
-        <div class="flex gap-2 p-4 h-full flex-row flex-wrap overflow-y-auto content-start border-l border-b border-twcolor-950">
+        <div class="flex gap-2 p-4 h-full flex-row flex-wrap overflow-y-auto content-start border-l border-b border-twcolor-950 shadow-twcolor-800 shadow-inner">
         {posts ? posts.map(post => (
                         <PostCard postThumb={post} />
         )) :

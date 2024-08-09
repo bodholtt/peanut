@@ -2,9 +2,10 @@
 import PostsLayout from "../layouts/PostsLayout.astro";
 ---
 
-<PostsLayout title="404">
+<PostsLayout title="401">
     <div class="flex flex-col justify-center gap-2 items-center w-full h-full">
-        <h1 class="text-6xl">Not Found</h1>
+        <h1 class="text-6xl">Unauthorized</h1>
+        <p>You are not authorized to view this content.</p>
         <a href="/posts" class="text-twcolor-800 underline">Return</a>
     </div>
 </PostsLayout>

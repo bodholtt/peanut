@@ -2,12 +2,13 @@
 import PostsLayout from "../layouts/PostsLayout.astro";
 
 const api = import.meta.env.API_URL
+
+// const response = fetch(`${api}`)
 ---
 
 <PostsLayout title="Upload">
-    <section class="flex pt-20 w-full h-full overflow-y-scroll justify-center">
+    <section class="flex flex-col gap-4 w-3/5 max-h-full pt-20 overflow-y-scroll items-start mx-auto">
 
-        <div class="w-3/5 max-h-full flex flex-col gap-4 items-start">
             <h1 class="text-6xl">Create new post</h1>
 
             <div class="flex flex-row w-full max-h-full">
@@ -28,9 +29,14 @@ const api = import.meta.env.API_URL
                     <textarea id="tags" name="tags" placeholder="Tags" class="w-full resize-none p-2" rows="4"></textarea>
 
                     <label for="source">Source:</label>
-                    <input type="text" id="source" name="source" placeholder="Source" />
+                    <input type="text" id="source" name="source" placeholder="Source" class="w-full"/>
 
                     <button type="submit" class="border rounded border-twcolor-950 bg-twcolor-100 px-2">create post</button>
+
+                    <div class="hidden flex-col gap-1 items-start" id="errortext">
+                        <p>There was an error uploading your post.</p>
+                        <p id="errortextreason"></p>
+                    </div>
                 </form>
 
                 <div class="p-2 w-[40%] max-h-full justify-center flex">
@@ -39,7 +45,6 @@ const api = import.meta.env.API_URL
 
             </div>
 
-        </div>
     </section>
 </PostsLayout>
 
@@ -47,6 +52,9 @@ const api = import.meta.env.API_URL
     const imageuploader = document.getElementById("image");
     const preview = document.getElementById("preview") as HTMLImageElement;
     const form = document.getElementById("submittingForm") as HTMLFormElement;
+    const errortext = document.getElementById("errortext") as HTMLDivElement;
+    const errortextreason = document.getElementById("errortextreason") as HTMLDivElement;
+    const apiurl = form.dataset.apiurl
 
     imageuploader.addEventListener("change", (event) => {
         preview.src = URL.createObjectURL(event.target.files[0]);
@@ -55,19 +63,28 @@ const api = import.meta.env.API_URL
         }
     });
 
-    form.addEventListener('submit', async (event) => {
-        event.preventDefault();
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
         let formData = new FormData(form);
 
-        const apiRoute: string = form.dataset.apiurl
+        const tokenr = await (await fetch('/gettoken')).json();
 
-        const response = await fetch(`${apiRoute}/post`,{
+        const response = await fetch(`${apiurl}/post`,{
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: {
+                "Authorization": `Bearer ${tokenr}`
+            }
         });
 
         const data = await response.json();
-        window.location.href = `/post/${data}`
+        if (response.ok) {
+            window.location.href = `/post/${data.body}`
+        } else {
+            errortextreason.innerText = data.error
+            errortext.classList.remove("hidden")
+            errortext.classList.add("flex")
+        }
     });
 
 </script>

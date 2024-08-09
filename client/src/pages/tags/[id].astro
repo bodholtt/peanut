@@ -1,0 +1,61 @@
+---
+import InfoLayout from "../../layouts/InfoLayout.astro";
+import type {Tag} from "../../global/types";
+import InsetBlock from "../../components/InsetBlock.astro";
+const { id } = Astro.params;
+
+const response = await fetch(`${import.meta.env.API_URL}/tag/${id}`);
+if (response.status == 404) {
+    return new Response(null, {
+        status: 404
+    });
+}
+
+const tag: Tag = await response.json();
+if (!tag) {
+    return new Response(null, {
+        status: 404
+    });
+}
+
+---
+
+<InfoLayout title={tag.name}>
+
+    <div class="flex flex-row w-full justify-between items-baseline">
+        <div class="flex items-baseline justify-start gap-2">
+            <h1 class="text-6xl">&#127991;{tag.name}</h1>
+            <p class="text-gray-500">#{tag.id}</p>
+        </div>
+        <p class="text-gray-500">0 uses</p>
+    </div>
+
+    <InsetBlock>
+        <p>{tag.description}</p>
+        <a class="text-twcolor-800" href={`/posts?q=${tag.name}`}>See posts tagged <span class="italic underline">{tag.name}</span></a>
+    </InsetBlock>
+
+    <div class="flex w-full justify-end py-2">
+        <button id="deleteTag"
+                data-apiurl={import.meta.env.API_URL}
+                data-tagid={tag.id}
+                class="rounded bg-twcolor-100 px-2">&#128465; Delete Tag</button>
+    </div>
+
+</InfoLayout>
+
+<script>
+    const deleteButton = document.getElementById("deleteTag");
+
+    deleteButton.addEventListener("click", async () => {
+        const apiRoute: string = deleteButton.dataset.apiurl
+        const tagID: string = deleteButton.dataset.tagid
+
+        const response = await fetch(`${apiRoute}/tag/${tagID}`, {
+            method: 'DELETE',
+        });
+        console.log(response);
+
+        window.location.href = "/posts";
+    });
+</script>

@@ -1,0 +1,73 @@
+---
+import InfoLayout from "../layouts/InfoLayout.astro";
+import InsetBlock from "../components/InsetBlock.astro";
+---
+
+<InfoLayout title="Login">
+    <h1 class="text-6xl">Log in</h1>
+    <InsetBlock>
+        <div class="flex flex-row gap-2 items-center">
+            <span class="text-6xl">&#9888;</span>
+            <div>
+                <p class="text-4xl">User authentication not finalized</p>
+                <p>Server updates may cause breaking changes and loss of user data</p>
+            </div>
+        </div>
+    </InsetBlock>
+
+    <form class="w-1/2 mx-auto flex flex-col gap-2 border border-twcolor-950 bg-twcolor-100 p-2 items-center"
+          id="userform"
+    >
+        <div class="flex flex-row w-full gap-2 justify-between">
+            <label for="username">Username:</label>
+            <input type="text" name="username" id="username" class="w-2/3" required/>
+        </div>
+        <div class="flex flex-row w-full gap-2 justify-between">
+            <label for="password">Password:</label>
+            <input type="password" name="password" id="password" class="w-2/3" required/>
+        </div>
+        <button type="submit" class="border-twcolor-950 border bg-twcolor-50 w-fit px-2">Login</button>
+    </form>
+
+    <div class="w-full hidden flex-row justify-center gap-1" id="loginattempttext">
+        <p>Login attempt failed.</p>
+    </div>
+
+    <div class="w-full flex flex-row justify-center gap-1">
+        <p>Don't have an account?</p> <a href="/signup" class="text-twcolor-800">Sign up</a>
+    </div>
+
+</InfoLayout>
+
+<script>
+    const userform = document.getElementById("userform") as HTMLFormElement;
+    const loginattempttext = document.getElementById("loginattempttext") as HTMLDivElement;
+
+    userform.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = new FormData(userform);
+
+        const response = await fetch("/processlogin", {
+            method: 'POST',
+            body: JSON.stringify({
+                username: formData.get("username"),
+                password: formData.get("password")
+            }),
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+
+        if (response.ok) {
+            await response.json().then(d => {
+                console.log(d.message);
+                window.location.href = "/posts";
+            })
+        }
+        else {
+            loginattempttext.classList.add("flex");
+            loginattempttext.classList.remove("hidden");
+        }
+    });
+
+</script>

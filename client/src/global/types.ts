@@ -25,3 +25,9 @@ export type User = {
     rank: number,
     created_at: string,
 }
+
+export type Tag = {
+    id: number,
+    name: string,
+    description: string,
+}

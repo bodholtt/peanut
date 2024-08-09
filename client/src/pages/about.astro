@@ -1,9 +1,12 @@
 ---
-import PostsLayout from "../layouts/PostsLayout.astro";
+import InfoLayout from "../layouts/InfoLayout.astro";
+import InsetBlock from "../components/InsetBlock.astro";
 ---
-<PostsLayout title="About">
-    <section class="flex flex-col items-center justify-center">
-        <h1 class="text-6xl text-twcolor-950">Peanut</h1>
+<InfoLayout title="About">
+    <h1 class="text-6xl text-twcolor-950">&#129372;Peanut</h1>
+    <InsetBlock>
         <p>Peanut, ver 0.0.1</p>
-    </section>
-</PostsLayout>
+        <p>Client built with <a href="https://astro.build" class="text-twcolor-800">{Astro.generator}</a></p>
+        <a href="https://github.com/bodholtt/peanut" class="text-twcolor-800">GitHub</a>
+    </InsetBlock>
+</InfoLayout>

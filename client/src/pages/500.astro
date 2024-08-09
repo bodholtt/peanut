@@ -1,0 +1,19 @@
+---
+import PostsLayout from "../layouts/PostsLayout.astro";
+
+const { error } = Astro.props;
+
+let msg = "";
+switch (error.toString()) {
+    case "TypeError: fetch failed":
+        msg = "Could not communicate with backend";
+}
+
+---
+
+<PostsLayout title="500 Internal Server Error">
+    <section class="flex flex-col justify-center gap-2 items-center w-full h-full">
+        <p>{error}</p>
+        {msg? <p>{msg}</p> : ''}
+    </section>
+</PostsLayout>

@@ -7,6 +7,9 @@ const data = await response.body;
 
 <p>{data}</p>
 
-<form action={`${import.meta.env.API_URL}/post`} method="POST">
-    <button type="submit">New Post</button>
+<form action={`${import.meta.env.API_URL}/tag`} method="POST">
+    <button type="submit">New tag</button>
+</form>
+<form action={`${import.meta.env.API_URL}/user`} method="POST">
+    <button type="submit">New user</button>
 </form>

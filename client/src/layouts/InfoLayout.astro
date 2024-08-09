@@ -1,0 +1,13 @@
+---
+import PostsLayout from "./PostsLayout.astro";
+interface Props {
+    title: string;
+}
+const { title } = Astro.props;
+---
+
+<PostsLayout title={title}>
+    <section class="p-8 h-full overflow-hidden flex flex-col gap-4 overflow-y-auto mx-auto w-2/3">
+        <slot/>
+    </section>
+</PostsLayout>

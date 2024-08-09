@@ -1,19 +1,20 @@
 ---
 import PostsLayout from "../../layouts/PostsLayout.astro";
-import type {Post, User} from "../../global/types";
+import type {Post, Tag, User} from "../../global/types";
 
 const { id } = Astro.params;
 const titleActual = `Post ${id}`
 
-const response = await fetch(`${import.meta.env.API_URL}/post/${id}`);
-if (response.status == 404) {
-    return new Response(null, {
-        status: 404
-    });
+const token = Astro.cookies.get("token");
+let headers = {}
+if (token) headers = { "Authorization": `Bearer ${token?.value}` }
+const response = await fetch(`${import.meta.env.API_URL}/post/${id}`, headers);
+if (response.status != 302) {
+    return Astro.rewrite("/401")
 }
 
-const postDetails: Post = await response.json();
 
+const postDetails: Post = await response.json();
 if (!postDetails) {
     return new Response(null, {
         status: 404
@@ -21,11 +22,30 @@ if (!postDetails) {
 }
 
 const uploadDate = new Date(postDetails.created_at);
-const tags = postDetails.tags? postDetails.tags.split(' ') : []
+const tags: Tag[] = postDetails.tags as Tag[]
 const imagePath = `${import.meta.env.STATIC_URL}${postDetails.image_path}`
 
 const uresponse = await fetch(`${import.meta.env.API_URL}/user/${postDetails.author_id}`);
-const author: User = await uresponse.json();
+const udata = await uresponse.json();
+let author: User;
+if (!udata.error) {
+    author = udata.body;
+} else {
+    author = {
+        created_at: "",
+        rank: 0,
+        id: 0,
+        username: "anonymous"
+    }
+}
+
+
+let tagsText = ""
+if (tags) {
+    tags.map(tag => {
+        tagsText += tag.name + " "
+    })
+}
 ---
 
 <PostsLayout title={titleActual}>
@@ -67,12 +87,17 @@ const author: User = await uresponse.json();
         <label>
             <input type="text" class="w-full" placeholder="enter tags..."/>
         </label>
-        {tags.map((tag) => (
-            <a href={`/tags/${tag}`} class="text-twcolor-800">{tag}</a>
+        {tags && tags.map((tag) => (
+            <a href={`/tags/${tag.id}`} class="text-twcolor-800">{tag.name}</a>
         ))}
         <hr class="my-2"/>
 
-        <p>Uploaded by <a href={`/user/${author.id}`} class="text-twcolor-800">{author.username}</a></p>
+        { author.id?
+                <p>Uploaded by <a href={`/user/${author.id}`} class="text-twcolor-800">{author.username}</a></p>
+        :
+
+                <p>Uploaded by {author.username}</p>
+        }
         <p class="text-gray-500 text-xs">{uploadDate.toUTCString()}</p>
 
         <div class="flex items-start py-2">
@@ -95,15 +120,18 @@ const author: User = await uresponse.json();
 
         <hr class="mx-8 border-twcolor-950"/>
 
-        <form class="px-4 pb-16 flex flex-col w-fit items-start gap-1">
+        <form class="px-4 pb-16 flex flex-col w-fit items-start gap-1"
+              id="changeForm"
+              data-apiurl={import.meta.env.API_URL}
+              data-id={id} enctype="application/x-www-form-urlencoded">
 
             <h2 class="text-2xl">Edit post</h2>
 
             <label for="tagbox">Tags:</label>
-            <textarea id="tagbox" rows="4" cols="64" class="resize-x">{tags.join(' ')}</textarea>
+            <textarea id="tagbox" name="tags" rows="4" cols="64" class="resize-x">{tagsText}</textarea>
 
-            <label for="source">Source:</label>
-            <input type="text" id="source" value={postDetails.source} class="w-full" />
+            <label for="sourceInput">Source:</label>
+            <input type="text" id="sourceInput" name="source" value={postDetails.source} class="w-full" />
 
             <br class="m-2"/>
 
@@ -167,12 +195,41 @@ const author: User = await uresponse.json();
         const apiRoute: string = deleteButton.dataset.apiurl
         const postID: string = deleteButton.dataset.id
 
+        const tokenr = await (await fetch('/gettoken')).json();
         const response = await fetch(`${apiRoute}/post/${postID}`, {
             method: 'DELETE',
-        }).then(() => {console.log("finished")});
+            headers: {
+                "Authorization": `Bearer ${tokenr}`
+            }
+        });
         console.log(response);
 
         window.location.href = "/posts";
+    });
+
+    const changeForm = document.getElementById("changeForm") as HTMLFormElement;
+    const tagBox = document.getElementById("tagbox") as HTMLTextAreaElement;
+    const sourceInput = document.getElementById("sourceInput") as HTMLInputElement;
+
+    changeForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const apiRoute: string = changeForm.dataset.apiurl
+        const postID: string = changeForm.dataset.id
+
+        const formData = new FormData(changeForm);
+        console.log(formData)
+
+        const response = await fetch(`${apiRoute}/post/${postID}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    tags: formData.get("tags")
+                }),
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            });
+        // await response.json().then(data => console.log(data));
+        console.log(response)
     });
 
 </script>

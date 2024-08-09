@@ -2,7 +2,8 @@
 import Layout from "../layouts/Layout.astro";
 
 const response = await fetch(`${import.meta.env.API_URL}/postCount`);
-const postCount = await response.json();
+const data = await response.json();
+const postCount = response.ok? data.body : data.error;
 ---
 
 <Layout title="">
@@ -15,8 +16,13 @@ const postCount = await response.json();
 			</label>
 			<button type="submit">&#x1F50D;</button>
 		</form>
-		<a href="/posts">view all posts</a>
 
-		<a href="/upload">upload a post</a>
+		<div class="flex flex-row gap-2">
+			<a href="/posts">view all posts</a>
+			<p>&#9733;</p>
+			<a href="/login">login</a>
+			<p>&#9733;</p>
+			<a href="/signup">sign up</a>
+		</div>
 	</article>
 </Layout>
