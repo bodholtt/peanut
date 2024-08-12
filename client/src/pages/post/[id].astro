@@ -1,6 +1,9 @@
 ---
 import PostsLayout from "../../layouts/PostsLayout.astro";
 import type {Post, Tag, User} from "../../global/types";
+import { userData, userPerms } from "../../userStore";
+import { getImage } from "astro:assets";
+import ErrorBlock from "../../components/ErrorBlock.astro";
 
 const { id } = Astro.params;
 const titleActual = `Post ${id}`
@@ -10,11 +13,14 @@ let headers = {}
 if (token) headers = { "Authorization": `Bearer ${token?.value}` }
 const response = await fetch(`${import.meta.env.API_URL}/post/${id}`, headers);
 if (response.status != 302) {
-    return Astro.rewrite("/401")
+    // do something
 }
 
-
-const postDetails: Post = await response.json();
+const data = await response.json();
+if (data.error) {
+    // do something
+}
+const postDetails: Post = data.body;
 if (!postDetails) {
     return new Response(null, {
         status: 404
@@ -22,14 +28,24 @@ if (!postDetails) {
 }
 
 const uploadDate = new Date(postDetails.created_at);
-const tags: Tag[] = postDetails.tags as Tag[]
-const imagePath = `${import.meta.env.STATIC_URL}${postDetails.image_path}`
+const imageSrc = `${import.meta.env.STATIC_URL}${postDetails.image_path}`
+// this is so that we can get the image details and prerender them in the sidebar so we don't have to do it in client-side js :3
+const postImage = await getImage({src: imageSrc, inferSize: true});
 
-const uresponse = await fetch(`${import.meta.env.API_URL}/user/${postDetails.author_id}`);
-const udata = await uresponse.json();
+let tags = postDetails.tags
+let tagsText = ""
+if (tags) {
+    tags = tags.sort((a,b) => a.name > b.name? 1 : -1);
+    tags.map(tag => {
+        tagsText += tag.name + " "
+    })
+}
+
+const userResponse = await fetch(`${import.meta.env.API_URL}/user/${postDetails.author_id}`);
+const uData = await userResponse.json();
 let author: User;
-if (!udata.error) {
-    author = udata.body;
+if (!uData.error) {
+    author = uData.body;
 } else {
     author = {
         created_at: "",
@@ -39,13 +55,7 @@ if (!udata.error) {
     }
 }
 
-
-let tagsText = ""
-if (tags) {
-    tags.map(tag => {
-        tagsText += tag.name + " "
-    })
-}
+const isPostOwner = userData.get().UserID == author.id;
 ---
 
 <PostsLayout title={titleActual}>
@@ -79,7 +89,9 @@ if (tags) {
             <span class="text-twcolor-950">&#9733;</span>
             <p class="fitclass underline font-bold" title="both" id="fitboth">both</p>
         </div>
-        <a href={imagePath} class="text-twcolor-800">open image</a>
+        <p>original: <span id="imageDetails">{postImage.attributes.width}x{postImage.attributes.height} {postImage.src.split('.').pop()}</span></p>
+        <a href={postImage.src} class="text-twcolor-800">open image</a>
+
         {postDetails.source ? <a href={postDetails.source} class="text-twcolor-800">image source</a> : ''}
 
         <br class="m-2"/>
@@ -100,19 +112,23 @@ if (tags) {
         }
         <p class="text-gray-500 text-xs">{uploadDate.toUTCString()}</p>
 
+        {isPostOwner && userPerms.get().DeleteOwnPosts || userPerms.get().DeleteOthersPosts?
         <div class="flex items-start py-2">
             <button id="deletePost"
                     data-apiurl={import.meta.env.API_URL}
                     data-id={id}
                     class="rounded bg-twcolor-100 px-2">&#128465; Delete Post</button>
         </div>
+            :
+            ''
+        }
 
     </section>
 
     <section class="flex flex-col gap-2 overflow-y-auto min-h-fit">
 
         <div id="imageouter" class="max-w-full min-h-fit h-full p-4">
-            <img src={imagePath}
+            <img src={imageSrc}
                  id="image"
                  alt={`Post ${postDetails.id}`}
                  class="max-h-full max-w-full"/>
@@ -120,10 +136,17 @@ if (tags) {
 
         <hr class="mx-8 border-twcolor-950"/>
 
-        <form class="px-4 pb-16 flex flex-col w-fit items-start gap-1"
+        {isPostOwner || userPerms.get().EditOthersPosts ?
+        <form class="p-4 pb-16 flex flex-col w-fit items-start gap-1"
               id="changeForm"
               data-apiurl={import.meta.env.API_URL}
               data-id={id} enctype="application/x-www-form-urlencoded">
+
+            <div id="editErrorOuter" class="hidden">
+                <ErrorBlock className="">
+                    <span>There was an error editing this post.</span>
+                </ErrorBlock>
+            </div>
 
             <h2 class="text-2xl">Edit post</h2>
 
@@ -138,7 +161,7 @@ if (tags) {
             <button type="submit"
                     class="border rounded border-twcolor-950 px-2 bg-twcolor-100">Submit changes</button>
 
-        </form>
+        </form> : '' }
 
     </section>
 
@@ -146,11 +169,12 @@ if (tags) {
 </PostsLayout>
 
 <script>
-    let image = document.getElementById("image");
+    let image = document.getElementById("image") as HTMLImageElement;
     let imageouter = document.getElementById("imageouter");
     let fitwidth = document.getElementById("fitwidth");
     let fitheight = document.getElementById("fitheight");
     let fitboth = document.getElementById("fitboth");
+    let editErrorOuter = document.getElementById("editErrorOuter") as HTMLDivElement;
 
     const setFit = (fit: string) => {
         switch (fit) {
@@ -191,7 +215,7 @@ if (tags) {
 
     const deleteButton = document.getElementById("deletePost");
 
-    deleteButton.addEventListener("click", async () => {
+    deleteButton?.addEventListener("click", async () => {
         const apiRoute: string = deleteButton.dataset.apiurl
         const postID: string = deleteButton.dataset.id
 
@@ -219,17 +243,23 @@ if (tags) {
         const formData = new FormData(changeForm);
         console.log(formData)
 
+        const tokenr = await (await fetch('/gettoken')).json();
         const response = await fetch(`${apiRoute}/post/${postID}`, {
                 method: 'PUT',
                 body: JSON.stringify({
                     tags: formData.get("tags")
                 }),
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${tokenr}`
                 }
             });
-        // await response.json().then(data => console.log(data));
         console.log(response)
+        if (!response.ok) {
+            editErrorOuter.classList.remove("hidden");
+        } else {
+            window.location.reload();
+        }
     });
 
 </script>

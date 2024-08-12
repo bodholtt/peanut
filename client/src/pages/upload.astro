@@ -1,21 +1,20 @@
 ---
-import PostsLayout from "../layouts/PostsLayout.astro";
-
-const api = import.meta.env.API_URL
-
-// const response = fetch(`${api}`)
+import { userPerms } from "../userStore";
+import ErrorBlock from "../components/ErrorBlock.astro";
+import InfoLayout from "../layouts/InfoLayout.astro";
 ---
 
-<PostsLayout title="Upload">
-    <section class="flex flex-col gap-4 w-3/5 max-h-full pt-20 overflow-y-scroll items-start mx-auto">
+<InfoLayout title="Upload">
 
-            <h1 class="text-6xl">Create new post</h1>
+    <h1 class="text-6xl">Create new post</h1>
+
+        {userPerms.get().CreatePosts ?
 
             <div class="flex flex-row w-full max-h-full">
 
                 <form id="submittingForm"
                       class="flex flex-col gap-1 items-start w-full p-2"
-                      data-apiurl={api}
+                      data-apiurl={import.meta.env.API_URL}
                 >
                     <!--  action={`${import.meta.env.API_URL}/post`}-->
                     <!--method="post"-->
@@ -44,9 +43,15 @@ const api = import.meta.env.API_URL
                 </div>
 
             </div>
+            :
+            <div class="w-full">
+                <ErrorBlock iconClass="text-4xl">
+                    <h2 class="text-4xl">You don't have permission to create posts.</h2>
+                </ErrorBlock>
+            </div>
+        }
 
-    </section>
-</PostsLayout>
+</InfoLayout>
 
 <script>
     const imageuploader = document.getElementById("image");

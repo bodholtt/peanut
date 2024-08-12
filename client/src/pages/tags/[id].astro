@@ -1,23 +1,17 @@
 ---
 import InfoLayout from "../../layouts/InfoLayout.astro";
 import type {Tag} from "../../global/types";
-import InsetBlock from "../../components/InsetBlock.astro";
+import InsetBlock from "../../components/InfoBlock.astro";
 const { id } = Astro.params;
 
 const response = await fetch(`${import.meta.env.API_URL}/tag/${id}`);
-if (response.status == 404) {
+const data = await response.json();
+if (data.error) {
     return new Response(null, {
         status: 404
     });
 }
-
-const tag: Tag = await response.json();
-if (!tag) {
-    return new Response(null, {
-        status: 404
-    });
-}
-
+const tag: Tag = data.body;
 ---
 
 <InfoLayout title={tag.name}>

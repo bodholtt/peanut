@@ -1,11 +1,11 @@
 ---
 import InfoLayout from "../layouts/InfoLayout.astro";
-import InsetBlock from "../components/InsetBlock.astro";
+import InsetBlock from "../components/InfoBlock.astro";
 ---
 
 <InfoLayout title="Login">
     <h1 class="text-6xl">Log in</h1>
-    <InsetBlock>
+    <InsetBlock error="true">
         <div class="flex flex-row gap-2 items-center">
             <span class="text-6xl">&#9888;</span>
             <div>

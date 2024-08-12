@@ -1,7 +1,7 @@
 
 export type Post = {
     id: number,
-    tags: string,
+    tags: Tag[],
     image_path: string,
     created_at: string,
     author_id: number,

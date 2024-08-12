@@ -1,4 +1,5 @@
 import type {APIRoute} from "astro";
+import {userData, userPerms} from "../userStore.ts";
 
 export const POST: APIRoute = async ({ cookies, request}) => {
 
@@ -37,6 +38,16 @@ export const POST: APIRoute = async ({ cookies, request}) => {
         secure: true,
         sameSite: "strict"
     });
+
+    // should i store the token in the userdata store? something to think about
+
+    userData.set({
+        Username: payload.username,
+        UserID: payload.user_id
+    })
+
+    const userPermsData = await (await fetch(`${import.meta.env.API_URL}/user/${userData.get().UserID}/permissions`)).json();
+    userPerms.set(userPermsData.body);
 
     return new Response(JSON.stringify({
         message: "Token set"

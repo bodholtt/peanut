@@ -1,0 +1,11 @@
+---
+interface Props {
+    error?: boolean
+    className?: string
+}
+const { error, className } = Astro.props
+---
+
+<div class=`border-l-4 ${error? 'border-red-950 bg-red-100 shadow-red-800' : 'border-twcolor-950 bg-twcolor-100 shadow-twcolor-800'} flex flex-col p-4 gap-1 shadow-inner ${className}`>
+    <slot/>
+</div>

@@ -1,23 +1,28 @@
 ---
 import Layout from "./Layout.astro";
+import { userData, userPerms } from "../userStore"
+
 interface Props {
     title: string;
 }
 const { title } = Astro.props;
 
-let user = {
-    username: "",
-    id: 0
+const token = Astro.cookies.get("token")?.value;
+// if userdata is somehow not set, set it from token
+if ( token && !userData.get().UserID ) {
+    const payload = JSON.parse(atob(token.split('.')[1])); // Token payload
+    userData.set({
+        Username: payload.username,
+        UserID: payload.user_id
+    })
+
+    const userPermsResponse = await fetch(`${import.meta.env.API_URL}/user/${userData.get().UserID}/permissions`);
+    if (userPermsResponse.ok) {
+        const userPermsData = await userPermsResponse.json();
+        userPerms.set(userPermsData.body);
+        console.log(userPerms.get());
+    }
 }
-
-const token = Astro.cookies.get('token');
-if (token) {
-    const payload = JSON.parse(atob(token.value.split('.')[1])); // Token payload
-    user.username = payload.username;
-    user.id = payload.id;
-}
-
-
 ---
 
 <Layout title={title}>
@@ -35,8 +40,8 @@ if (token) {
                     <a href="/about">about</a>
                 </div>
                 <div class="flex flex-row gap-4">
-                    {user.id?
-                        <a href=`/user/${user.id}`>Welcome, {user.username}</a>
+                    {userData.get().UserID?
+                        <a href=`/user/${userData.get().UserID}`>Welcome, {userData.get().Username}</a>
                         <p>&#9733;</p>
                         <a href=`/logout`>logout</a>
                         :
@@ -47,7 +52,6 @@ if (token) {
                 </div>
             </nav>
         </section>
-
         <slot />
 
     </article>

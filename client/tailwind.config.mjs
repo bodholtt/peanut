@@ -8,6 +8,7 @@ export default {
 			twcolor: colors.amber,
 			white: colors.white,
 			black: colors.black,
+			red: colors.red,
 			transparent: 'transparent',
 			gray: colors.gray,
 		},
