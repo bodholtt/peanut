@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"peanutserver/types"
-	"strconv"
 	"time"
 )
 
@@ -25,9 +24,9 @@ func GetUser(id int) (*types.User, error) {
 	}
 
 	user := types.User{
-		ID:        strconv.Itoa(uid),
+		ID:        uid,
 		Username:  name,
-		Rank:      strconv.Itoa(rank),
+		Rank:      rank,
 		CreatedAt: createdAt.String(),
 	}
 
@@ -62,6 +61,7 @@ func CreateUser(name string, hashedPassword string, rank int) (id int, err error
 	return id, nil
 }
 
+// CheckAuthentication - verify if a username and hashed password combo aligns with a db entry.
 func CheckAuthentication(name string, hashedPassword string) (id int, err error) {
 	db := Establish()
 	defer db.Close()
@@ -76,14 +76,15 @@ func CheckAuthentication(name string, hashedPassword string) (id int, err error)
 	return userID, nil
 }
 
-func CheckUserRank(name string, requiredRank int) (err error) {
+// CheckUserRank - check if user rank is geq requiredRank, error if it is not.
+func CheckUserRank(id int, requiredRank int) (err error) {
 	db := Establish()
 	defer db.Close()
 
 	var userRank int
 
-	err = db.QueryRow(context.Background(), "SELECT rank FROM users WHERE name = $1",
-		name).Scan(&userRank)
+	err = db.QueryRow(context.Background(), "SELECT rank FROM users WHERE user_id = $1",
+		id).Scan(&userRank)
 	if err != nil {
 		return err
 	}

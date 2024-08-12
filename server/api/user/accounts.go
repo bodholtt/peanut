@@ -1,4 +1,4 @@
-package api
+package user
 
 import (
 	"crypto/sha256"
@@ -20,13 +20,6 @@ func hashPassword(password string) string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
-// userData - struct for accepting necessary user data
-type userData struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Rank     int    `json:"rank"`
-}
-
 // HandleAccountsOPTIONS - OPTIONS for /login, /signup, /createUser
 func HandleAccountsOPTIONS(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", pcfg.Cfg.Client.Host)
@@ -39,7 +32,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Access-Control-Allow-Origin", pcfg.Cfg.Client.Host)
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	user := &userData{}
+	user := &types.User{}
 
 	err := json.NewDecoder(r.Body).Decode(user)
 	if err != nil {
@@ -105,7 +98,7 @@ func HandleSignup(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", pcfg.Cfg.Client.Host)
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-	user := &userData{}
+	user := &types.User{}
 
 	err := json.NewDecoder(r.Body).Decode(user)
 	if err != nil {
@@ -117,7 +110,7 @@ func HandleSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user.Rank = pcfg.Cfg.Permissions.DefaultRank
+	user.Rank = pcfg.Perms.DefaultRank
 	hashedPassword := hashPassword(user.Password)
 
 	userID, err := database.CreateUser(user.Username, hashedPassword, user.Rank)
@@ -142,7 +135,7 @@ func HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", pcfg.Cfg.Client.Host)
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-	user := &userData{}
+	user := &types.User{}
 
 	err := json.NewDecoder(r.Body).Decode(user)
 	if err != nil {
@@ -156,7 +149,7 @@ func HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 
 	// a user cannot be rank 0 (anonymous)
 	if user.Rank == 0 {
-		user.Rank = pcfg.Cfg.Permissions.DefaultRank
+		user.Rank = pcfg.Perms.DefaultRank
 	}
 
 	hashedPassword := hashPassword(user.Password)

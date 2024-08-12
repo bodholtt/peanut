@@ -3,9 +3,11 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"peanutserver/database"
 	"peanutserver/types"
 	"strconv"
+	"strings"
 )
 
 // API route: /posts
@@ -25,7 +27,9 @@ func handlePostsGET(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
-	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	params, _ := url.ParseQuery(r.URL.RawQuery)
+
+	limit, err := strconv.Atoi(params.Get("limit"))
 	if err != nil {
 		limit = 50
 	}
@@ -33,7 +37,7 @@ func handlePostsGET(w http.ResponseWriter, r *http.Request) {
 		limit = 50
 	}
 
-	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+	offset, err := strconv.Atoi(params.Get("offset"))
 	if err != nil {
 		offset = 0
 	}
@@ -41,11 +45,18 @@ func handlePostsGET(w http.ResponseWriter, r *http.Request) {
 		offset = 0
 	}
 
+	var tags []string
+
+	tagsQuery := params.Get("tags")
+	if tagsQuery != "" {
+		tags = strings.Split(tagsQuery, ",")
+	}
+
 	//limit <= 50
 	//return at most 50 posts
 	//if no limit designated return 50 posts
 
-	posts, err := database.GetPostThumbs(limit, offset)
+	posts, err := database.GetPostThumbs(limit, offset, tags)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(types.APIResponse{

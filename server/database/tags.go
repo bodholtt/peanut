@@ -5,10 +5,10 @@ import (
 	"errors"
 	"log"
 	"peanutserver/types"
-	"strconv"
 )
 
-func GetTag(id int) (tag *types.Tag, err error) {
+// GetTagByID - Get a tag by its ID.
+func GetTagByID(id int) (tag *types.Tag, err error) {
 	db := Establish()
 	defer db.Close()
 
@@ -24,7 +24,7 @@ func GetTag(id int) (tag *types.Tag, err error) {
 	}
 
 	tag = &types.Tag{
-		ID:          strconv.Itoa(id),
+		ID:          id,
 		Name:        tagName,
 		Description: description,
 	}
@@ -32,6 +32,32 @@ func GetTag(id int) (tag *types.Tag, err error) {
 	return tag, nil
 }
 
+// GetTagByName - Get a tag by its name.
+func GetTagByName(name string) (tag *types.Tag, err error) {
+	db := Establish()
+	defer db.Close()
+
+	var tagID int
+	var description string
+
+	err = db.QueryRow(context.Background(),
+		"SELECT tag_id, description FROM tags WHERE name = $1", name).
+		Scan(&tagID, &description)
+
+	if err != nil {
+		return nil, err
+	}
+
+	tag = &types.Tag{
+		ID:          tagID,
+		Name:        name,
+		Description: description,
+	}
+
+	return tag, nil
+}
+
+// GetTagsByPostID - Get a list of tags from a post by the post's ID.
 func GetTagsByPostID(id int) (tags *[]types.Tag, err error) {
 	db := Establish()
 	defer db.Close()
@@ -59,7 +85,7 @@ func GetTagsByPostID(id int) (tags *[]types.Tag, err error) {
 			return nil, err
 		}
 		postTags = append(postTags, types.Tag{
-			ID:   strconv.Itoa(tagID),
+			ID:   tagID,
 			Name: tagName,
 		})
 	}
@@ -67,6 +93,7 @@ func GetTagsByPostID(id int) (tags *[]types.Tag, err error) {
 	return &postTags, nil
 }
 
+// DeleteTag - Delete tag by ID.
 func DeleteTag(id int) (err error) {
 	db := Establish()
 	defer db.Close()
@@ -88,6 +115,7 @@ func DeleteTag(id int) (err error) {
 	return nil
 }
 
+// CreateTag - Create a tag by its name and return its ID.
 func CreateTag(name string) (id int, err error) {
 	db := Establish()
 	defer db.Close()
@@ -107,4 +135,41 @@ func CreateTag(name string) (id int, err error) {
 	log.Println("Created new tag", name, "with id", id)
 
 	return id, nil
+}
+
+// SetPostTags - Accept a post ID and a list of tag names, and link all the tags to the post.
+// If a tag doesn't exist, this function will call CreateTag to create it.
+func SetPostTags(postID int, tags []string) (err error) {
+	db := Establish()
+	defer db.Close()
+
+	// this kind of sucks and i would like to do it in a better way.
+
+	var tagsToBeSet []int
+
+	// clear post's current tags so that we don't have to handle tag removals
+	_, err = db.Query(context.Background(), "DELETE FROM post_tags WHERE post_id = $1", postID)
+	if err != nil {
+		return err
+	}
+
+	for _, tag := range tags {
+		retrievedTag, err := GetTagByName(tag)
+		if err != nil {
+			createdTagID, err := CreateTag(tag)
+			if err != nil {
+				continue
+			}
+			tagsToBeSet = append(tagsToBeSet, createdTagID)
+			continue
+		}
+		tagsToBeSet = append(tagsToBeSet, retrievedTag.ID)
+	}
+
+	for _, id := range tagsToBeSet {
+		db.QueryRow(context.Background(), "INSERT INTO post_tags (post_id, tag_id) VALUES ($1, $2)", postID, id)
+	}
+
+	log.Println("Tags updated for post", postID)
+	return nil
 }

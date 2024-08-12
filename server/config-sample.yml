@@ -1,7 +1,8 @@
 server:
-  port: 8080
+  port: 8080 # port the server listens on
+  secret_key: SECRETKEY # secret key used in signing JWTs, keep this secure
 images:
-  root_location: "./static" # directory where images are stored
+  root_location: "./static/" # directory where images are stored
   delete_image_files: false # upon post deletion, remove files if true, keep files if false
 database:
   host: "localhost" # locally reachable address of postgres database
@@ -12,3 +13,29 @@ database:
   params: "?sslmode=disable"
 client:
   host: "http://localhost:4321" # URL of client, including port if applicable
+
+permissions:
+  # Set permissions
+  # Default ranks:
+  #   0 - Anonymous
+  #   1 - User
+  #   2 - Moderator
+  #   3 - Administrator
+  # In theory, you could make your own ranks with any numbers, so long as higher = more permissions.
+
+  default_rank:         1 # Default rank for a new user
+
+  sign_up:              0
+  create_users:         3
+  delete_users:         3
+  edit_users:           3
+
+  view_posts:           0
+  create_posts:         1
+  delete_own_posts:     1
+  delete_others_posts:  2
+  edit_others_posts:    1
+
+  create_tags:          1
+  edit_tags:            1
+  delete_tags:          3

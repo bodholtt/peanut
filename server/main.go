@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"peanutserver/api"
+	"peanutserver/api/user"
 	"peanutserver/auth"
 	"peanutserver/database"
 	"peanutserver/pcfg"
@@ -30,7 +31,7 @@ func main() {
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	// route: /posts
-	mux.Handle("/posts", auth.RankMiddleware(http.HandlerFunc(api.HandlePosts), pcfg.Cfg.Permissions.ViewPosts))
+	mux.Handle("/posts", auth.RankMiddleware(http.HandlerFunc(api.HandlePosts), pcfg.Perms.ViewPosts))
 
 	// route: /postsCount
 	mux.HandleFunc("/postCount", api.HandlePostCount)
@@ -38,34 +39,30 @@ func main() {
 	// route: /post
 	mux.HandleFunc("OPTIONS /post", api.HandlePostOPTIONS)
 	mux.HandleFunc("OPTIONS /post/{id}", api.HandlePostOPTIONS)
-	mux.Handle("POST /post", auth.RankMiddleware(http.HandlerFunc(api.HandlePostPOST), pcfg.Cfg.Permissions.CreatePosts))
-	mux.Handle("GET /post/{id}", auth.RankMiddleware(http.HandlerFunc(api.HandlePostGET), pcfg.Cfg.Permissions.ViewPosts))
+	mux.Handle("POST /post", auth.RankMiddleware(http.HandlerFunc(api.HandlePostPOST), pcfg.Perms.CreatePosts))
+	mux.Handle("GET /post/{id}", auth.RankMiddleware(http.HandlerFunc(api.HandlePostGET), pcfg.Perms.ViewPosts))
 	// TODO: Allow users to edit their own posts, but restrict editing posts that are not their own.
-	mux.Handle("PUT /post/{id}", auth.RankMiddleware(http.HandlerFunc(api.HandlePostPUT), pcfg.Cfg.Permissions.EditOthersPosts))
+	mux.Handle("PUT /post/{id}", auth.RankMiddleware(http.HandlerFunc(api.HandlePostPUT), pcfg.Perms.EditOthersPosts))
 	// TODO: Restrict deletion of own posts and others' posts separately.
-	mux.Handle("DELETE /post/{id}", auth.RankMiddleware(http.HandlerFunc(api.HandlePostDELETE), pcfg.Cfg.Permissions.DeleteOwnPosts))
+	mux.Handle("DELETE /post/{id}", auth.RankMiddleware(http.HandlerFunc(api.HandlePostDELETE), pcfg.Perms.DeleteOwnPosts))
 
 	// route: /login
-	mux.HandleFunc("POST /login", api.HandleLogin)
-	mux.HandleFunc("OPTIONS /login", api.HandleAccountsOPTIONS)
+	mux.HandleFunc("POST /login", user.HandleLogin)
+	mux.HandleFunc("OPTIONS /login", user.HandleAccountsOPTIONS)
 
 	// route: /signup
-	mux.Handle("POST /signup", auth.RankMiddleware(http.HandlerFunc(api.HandleSignup), pcfg.Cfg.Permissions.SignUp))
-	mux.HandleFunc("OPTIONS /signup", api.HandleAccountsOPTIONS)
-
-	// route: /createUser
-	mux.Handle("POST /createUser", auth.RankMiddleware(http.HandlerFunc(api.HandleCreateUser), pcfg.Cfg.Permissions.CreateUsers))
-	mux.HandleFunc("OPTIONS /createUser", api.HandleAccountsOPTIONS)
+	mux.Handle("POST /signup", auth.RankMiddleware(http.HandlerFunc(user.HandleSignup), pcfg.Perms.SignUp))
+	mux.HandleFunc("OPTIONS /signup", user.HandleAccountsOPTIONS)
 
 	// route: /user
-	mux.HandleFunc("/user", api.HandleUser)
-	mux.HandleFunc("/user/{id}", api.HandleUser)
+	mux.HandleFunc("OPTIONS /user", user.HandleUserOPTIONS)
+	mux.Handle("POST /user", auth.RankMiddleware(http.HandlerFunc(user.HandleUserPOST), pcfg.Perms.CreateUsers))
+	mux.HandleFunc("GET /user/{id}", user.HandleUserGET)
+	mux.HandleFunc("GET /user/{id}/permissions", user.CheckPermissions)
 
 	// route: /tag
 	mux.HandleFunc("/tag", api.HandleTag)
 	mux.HandleFunc("/tag/{id}", api.HandleTag)
-
-	mux.HandleFunc("/post/{id}/tags", api.HandlePostTags)
 
 	log.Println("listening on port", pcfg.Cfg.Server.Port)
 

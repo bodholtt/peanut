@@ -7,12 +7,13 @@ import (
 	"log"
 	"net/http"
 	"peanutserver/database"
+	"peanutserver/pcfg"
 	"peanutserver/types"
 	"strings"
 	"time"
 )
 
-var secretKey = []byte("secretkey")
+var secretKey = []byte(pcfg.Cfg.Server.SecretKey)
 
 // userClaims - JWT claims allowing for registered claims + a user's username and id.
 type userClaims struct {
@@ -110,7 +111,7 @@ func RankMiddleware(next http.Handler, rank int) http.Handler {
 				return
 			}
 
-			username, _, err := verifyToken(tokenString)
+			_, id, err := verifyToken(tokenString)
 			if err != nil {
 				w.WriteHeader(http.StatusUnauthorized)
 				json.NewEncoder(w).Encode(types.APIResponse{
@@ -120,7 +121,7 @@ func RankMiddleware(next http.Handler, rank int) http.Handler {
 				return
 			}
 
-			err = database.CheckUserRank(username, rank)
+			err = database.CheckUserRank(id, rank)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				json.NewEncoder(w).Encode(types.APIResponse{

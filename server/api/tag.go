@@ -43,7 +43,7 @@ func handleTagGET(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tag, err := database.GetTag(id)
+	tag, err := database.GetTagByID(id)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(types.APIResponse{

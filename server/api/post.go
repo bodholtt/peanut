@@ -51,11 +51,15 @@ func HandlePostGET(w http.ResponseWriter, r *http.Request) {
 
 	prev, next := database.GetNextAndPreviousPostIDs(id, "")
 
-	post.Previous = strconv.Itoa(prev)
-	post.Next = strconv.Itoa(next)
+	post.Previous = prev
+	post.Next = next
 
 	w.WriteHeader(http.StatusFound)
-	json.NewEncoder(w).Encode(post)
+	json.NewEncoder(w).Encode(types.APIResponse{
+		Body:  post,
+		Error: "",
+	})
+
 }
 
 // HandlePostPOST - handle the creation of a Post object in the database.
@@ -77,7 +81,7 @@ func HandlePostPOST(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID, err := auth.GetUserIDFromAuthHeader(r)
-	if err != nil && pcfg.Cfg.Permissions.CreatePosts != 0 {
+	if err != nil && pcfg.Perms.CreatePosts != 0 {
 		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(types.APIResponse{
 			Body:  "",
@@ -147,15 +151,7 @@ type putData struct {
 func HandlePostPUT(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", pcfg.Cfg.Client.Host)
 
-	// Really shitty way to differentiate between requests to allow
-	// for omission in order to not update the value
-	// and for a value to be updated as empty
-	data := &putData{
-		Tags:   "UNGUESSABLE_DEFAULT_VALUE",
-		Source: "UNGUESSABLE_DEFAULT_VALUE",
-	}
-
-	err := json.NewDecoder(r.Body).Decode(data)
+	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(types.APIResponse{
@@ -165,17 +161,48 @@ func HandlePostPUT(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println(data.Tags, " , ", data.Source)
+	// Really shitty way to differentiate between requests to allow
+	// for omission in order to not update the value
+	// and for a value to be updated as empty
+	data := &putData{
+		Tags:   "UNGUESSABLE_DEFAULT_VALUE",
+		Source: "UNGUESSABLE_DEFAULT_VALUE",
+	}
+
+	err = json.NewDecoder(r.Body).Decode(data)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(types.APIResponse{
+			Body:  nil,
+			Error: err.Error(),
+		})
+		return
+	}
 
 	if data.Tags != "UNGUESSABLE_DEFAULT_VALUE" {
-		log.Println("Call database function to update tags")
+		t := strings.TrimSpace(data.Tags)
+		t = strings.ReplaceAll(t, "\n", "")
+		log.Println(t)
+		tags := strings.Split(t, " ")
+		err = database.SetPostTags(id, tags)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(types.APIResponse{
+				Body:  nil,
+				Error: err.Error(),
+			})
+			return
+		}
 	}
 	if data.Source != "UNGUESSABLE_DEFAULT_VALUE" {
 		log.Println("Call database function to update source")
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode("Not implemented")
+	json.NewEncoder(w).Encode(types.APIResponse{
+		Body:  "Post updated",
+		Error: "",
+	})
 }
 
 // HandlePostDELETE - handle the deletion of a Post object in the database.

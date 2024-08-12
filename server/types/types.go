@@ -17,15 +17,15 @@ type APIResponse struct {
 // Next: Next post for pagination
 // Query: The query to use for pagination
 type Post struct {
-	ID        string `json:"id"`
+	ID        int    `json:"id"`
 	Tags      []Tag  `json:"tags"`
 	CreatedAt string `json:"created_at"`
 	ImagePath string `json:"image_path"`
-	AuthorID  string `json:"author_id"`
+	AuthorID  int    `json:"author_id"`
 	Source    string `json:"source"`
 	MD5Hash   string `json:"md5_hash"`
-	Previous  string `json:"previous"` // Not stored in database - for pagination
-	Next      string `json:"next"`     // see above
+	Previous  int    `json:"previous"` // Not stored in database - for pagination
+	Next      int    `json:"next"`     // see above
 	Query     string `json:"query"`    // see above
 }
 
@@ -33,7 +33,7 @@ type Post struct {
 // ID: post id
 // ImagePath: Path to static image
 type PostThumb struct {
-	ID        string `json:"id"`
+	ID        int    `json:"id"`
 	ImagePath string `json:"image_path"`
 }
 
@@ -44,14 +44,15 @@ type PostThumbs struct {
 
 // User - user information
 type User struct {
-	ID        string `json:"id"`
+	ID        int    `json:"id"`
 	Username  string `json:"username"`
-	Rank      string `json:"rank"`
+	Password  string `json:"password"` // this should never be returned in a response, only used in receiving user data for signup/login
+	Rank      int    `json:"rank"`
 	CreatedAt string `json:"created_at"`
 }
 
 type Tag struct {
-	ID          string `json:"id"`
+	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }

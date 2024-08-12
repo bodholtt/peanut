@@ -2,9 +2,11 @@ package database
 
 import (
 	"context"
+	"github.com/jackc/pgx/v5"
 	"log"
 	"peanutserver/types"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -20,7 +22,7 @@ func GetPostCount() (int, error) {
 	return count, nil
 }
 
-func GetPostThumbs(limit int, offset int) (*types.PostThumbs, error) {
+func GetPostThumbs(limit int, offset int, tags []string) (thumbs *types.PostThumbs, err error) {
 	db := Establish()
 	defer db.Close()
 
@@ -28,22 +30,45 @@ func GetPostThumbs(limit int, offset int) (*types.PostThumbs, error) {
 	var rownum int // trash var so that scan works
 	var imagePath string
 
-	rows, err := db.Query(context.Background(),
-		`WITH ordered_posts AS (
+	var rows pgx.Rows
+
+	if len(tags) != 0 {
+
+		// TODO: actually get the tag ids
+		tagIDs := []string{"3", "4"}
+
+		queryString :=
+			`WITH ordered_posts AS (
+				SELECT post_id, image_path, ROW_NUMBER() OVER (ORDER BY post_id) AS row_num
+				FROM posts
+			) 
+			SELECT op.post_id, image_path, row_num FROM ordered_posts op
+			INNER JOIN post_tags pt ON op.post_id = pt.post_id
+			WHERE pt.tag_id IN (` + strings.Join(tagIDs, ",") + `)
+			AND row_num <= (SELECT count(*) FROM ordered_posts) - ` + strconv.Itoa(offset) + `
+			GROUP BY op.post_id, op.image_path, op.row_num HAVING COUNT(DISTINCT pt.tag_id) = ` + strconv.Itoa(len(tagIDs)) + `
+			ORDER BY op.row_num DESC LIMIT ` + strconv.Itoa(limit)
+		rows, err = db.Query(context.Background(), queryString)
+
+	} else {
+		rows, err = db.Query(context.Background(),
+			`WITH ordered_posts AS (
 				SELECT post_id, image_path, ROW_NUMBER() OVER (ORDER BY post_id) AS row_num
 				FROM posts
 			)
 			SELECT post_id, image_path, row_num FROM ordered_posts
 			WHERE row_num <= (SELECT count(*) FROM ordered_posts) - $1 
 			ORDER BY row_num DESC LIMIT $2`,
-		offset, limit)
+			offset, limit)
+	}
 
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	defer rows.Close()
 
-	thumbs := types.PostThumbs{}
+	thumbs = &types.PostThumbs{}
 
 	for rows.Next() {
 
@@ -52,12 +77,12 @@ func GetPostThumbs(limit int, offset int) (*types.PostThumbs, error) {
 			return nil, err
 		}
 		thumbs.Thumbs = append(thumbs.Thumbs, types.PostThumb{
-			ID:        strconv.Itoa(id),
+			ID:        id,
 			ImagePath: imagePath,
 		})
 	}
 
-	return &thumbs, nil
+	return thumbs, nil
 }
 
 func CreatePost(extension string, uploaderID int) (postID int, imagePath string, err error) {
@@ -142,15 +167,15 @@ func GetPost(id int) (*types.Post, error) {
 			break
 		}
 
-		tags = append(tags, types.Tag{ID: strconv.Itoa(tagID), Name: tagName})
+		tags = append(tags, types.Tag{ID: tagID, Name: tagName})
 	}
 
 	post := &types.Post{
-		ID:        strconv.Itoa(id),
+		ID:        id,
 		Tags:      tags,
 		CreatedAt: createdAt.String(),
 		ImagePath: imagePath,
-		AuthorID:  strconv.Itoa(authorID),
+		AuthorID:  authorID,
 		Source:    source,
 	}
 
